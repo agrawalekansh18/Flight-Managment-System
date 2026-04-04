@@ -16,7 +16,7 @@ def takeinput(PHONE_NUMBER,User_Phone,Table="Users"):
 
 def alreadyexists(User_Phone,value,Table="Users"):
     global mycursor
-    mycursor.execute(f"Select * from {Table} where {User_Phone}='{value}'")
+    mycursor.execute("Select * from {} where {}='{}'".format(Table,User_Phone,value))
     myresult = mycursor.fetchall()
     if(myresult==[]):
         return False
@@ -109,7 +109,11 @@ def specificflights():
     global mycursor
     Departure = input("DEPARTURE LOCATION : ")
     Arrival = input("ARRIVAL LOCATION : ")
-    mycursor.execute(f"select Flights.Flight_Code, Airline, Departure_Time, Price from Flights, Ticket_Price where Flights.Flight_Code=Ticket_Price.Flight_Code and From_ = '{Departure}' and To_ ='{Arrival}'")
+    mycursor.execute('''select F.Flight_Code, F.Airline, F.Departure_Time, P.Price 
+            from Flights F
+            JOIN Ticket_Price P
+            ON F.Flight_Code=P.Flight_Code
+            WHERE F.From_ = '{}' and F.To_ ='{}' '''.format(Departure,Arrival))
     myresult = mycursor.fetchall()
     if myresult == []:
         print("THIS FLIGHT IS NOT AVAILABLE WITH US.\n")
@@ -131,7 +135,11 @@ def createbookingid():
 #ADMIN FUNCTIONS
 
 def showflightdetails(Flightcode):
-    mycursor.execute("select Flights.*, Price from Flights, Ticket_Price where Flights.Flight_Code='{}' and Ticket_Price.Flight_Code='{}' ". format(Flightcode,Flightcode))
+    mycursor.execute('''select Flights.*, Ticket_Price.Price
+                     FROM Flights
+                     JOIN Ticket_Price 
+                     ON Flights.Flight_Code=Ticket_Price.Flight_Code
+                     WHERE Flights.Flight_Code='{}' '''. format(Flightcode))
     myresult = mycursor.fetchall()
     print("##",("FLIGHT CODE","AIRLINE","FROM","TO","DEPARTURE TIME","PRICE"),"##")
     for j in myresult:
@@ -141,8 +149,12 @@ def showflightdetails(Flightcode):
 
 def flightalreadyexists(Flightcode, Airline, Departure, Arrival, Time, Price):
      global mycursor
-     mycursor.execute('''select *  from Flights, Ticket_Price where
-         Flights.Flight_Code=Ticket_Price.Flight_Code and Airline='{}' 
+     mycursor.execute('''
+        select *  from Flights
+        JOIN Ticket_Price 
+        ON
+        Flights.Flight_Code=Ticket_Price.Flight_Code
+        WHERE Airline='{}' 
         and From_ = '{}' and To_ = '{}' and Departure_Time='{}'
         and Price={} '''.format(Airline,Departure,Arrival,Time,Price))
      myresult = mycursor.fetchall()

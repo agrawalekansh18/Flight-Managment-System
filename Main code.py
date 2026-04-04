@@ -92,7 +92,7 @@ if (login == "1"):
                     
                     match flightrequest:
                         case '1':
-                            mycursor.execute("select Flights.*, Price from Flights, Ticket_Price where Flights.Flight_Code=Ticket_Price.Flight_Code")
+                            mycursor.execute("select Flights.*, Ticket_Price.Price from Flights JOIN Ticket_Price ON Flights.Flight_Code=Ticket_Price.Flight_Code")
                             myresult = mycursor.fetchall()
                             print("##",("FLIGHT CODE","AIRLINE","FROM","TO","DEPARTURE TIME","PRICE"),"##")
                             for j in myresult:
@@ -280,7 +280,7 @@ else:
                         
                         match flightrequest:
                             case '1':
-                                mycursor.execute("select Flights.*, Price from Flights, Ticket_Price where Flights.Flight_Code=Ticket_Price.Flight_Code")
+                                mycursor.execute("select Flights.*, Ticket_Price.Price from Flights JOIN Ticket_Price ON Flights.Flight_Code=Ticket_Price.Flight_Code")
                                 myresult = mycursor.fetchall()
                                 print("##",("FLIGHT CODE","AIRLINE","FROM","TO","DEPARTURE TIME","PRICE"),"##")
                                 for j in myresult:
@@ -326,8 +326,11 @@ else:
             case '3': #Modify Flight
                 print("ENTER FLIGHT CODE OF FLIGHT YOU WISH TO MODIFY")
                 Flightcode= takeexistinginput("FLIGHT CODE","FLIGHT_CODE","Flights")
-                mycursor.execute('''select Flights.*, Price from Flights, Ticket_Price where 
-                    Flights.Flight_Code='{}' and Ticket_Price.Flight_Code='{}' '''.format(Flightcode,Flightcode))
+                mycursor.execute('''select Flights.*, Ticket_Price.Price
+                     FROM Flights
+                     JOIN Ticket_Price 
+                     ON Flights.Flight_Code=Ticket_Price.Flight_Code
+                     WHERE Flights.Flight_Code='{}' '''. format(Flightcode))
                 myresult = mycursor.fetchone()
 
                 Airline=myresult[1]
