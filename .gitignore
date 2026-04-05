@@ -7,3 +7,4 @@ __pycache__/mysqlconnect.cpython-313.pyc
 __pycache__/schema.cpython-313.pyc
 .vscode/launch.json
 
+db_config.py

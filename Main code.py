@@ -1,6 +1,7 @@
 import globalobjects
 from schema import createdb, createtables
-from db_utils import * #Supporting Functions 
+from db_utils import * #Supporting Functions
+import sys 
 
 
 print("*"*107)
@@ -8,11 +9,10 @@ print("\t"*5, "AIR TICKET MANAGEMENT SYSTEM")
 print("*"*107)
 
 createdb()  #Creates database 'ATMS'
-createtables() #Creates tables Flights, Ticket_Price, Bookings, Users, Admins
+createtables() #Creates tables Flights, Bookings, Users, Admins
 
 mycon=globalobjects.mycon
 mycursor=globalobjects.mycursor 
-
 
 #LOG IN/SIGN UP
 while True :
@@ -28,8 +28,8 @@ while True :
                     
                 User_Info = '''insert into Users(User_Id,User_Password,User_Email,User_Phone)
        values('{}','{}','{}','{}')'''.format(User_Id,User_Password,User_Email,User_Phone)
-                mycursor.execute(User_Info)
-                mycon.commit()
+                myresult=query_execute(User_Info)
+                #mycon.commit()
                 print("ACCOUNT CREATED & LOGGED IN AS USER\n")
                 break
                 
@@ -92,10 +92,10 @@ if (login == "1"):
                     
                     match flightrequest:
                         case '1':
-                            mycursor.execute("select Flights.*, Ticket_Price.Price from Flights JOIN Ticket_Price ON Flights.Flight_Code=Ticket_Price.Flight_Code")
-                            myresult = mycursor.fetchall()
+                            myresult=query_execute("select * FROM FLIGHTS")
                             print("##",("FLIGHT CODE","AIRLINE","FROM","TO","DEPARTURE TIME","PRICE"),"##")
                             for j in myresult:
+                                j=formattime(j,4)
                                 print(j)
                             print()
                         
@@ -116,8 +116,7 @@ if (login == "1"):
                 while(True):
                     
                     Flight_Code= input("ENTER FLIGHT CODE: ")
-                    mycursor.execute('''select Price from Ticket_Price where Flight_Code = '{}' '''.format(Flight_Code))
-                    myresult=mycursor.fetchall()
+                    myresult=query_execute('''select Price from FLIGHTS where Flight_Code = '{}' '''.format(Flight_Code))
                     if (myresult==[]):
                         print("FLIGHT DOES NOT EXIST")
                     else:
@@ -125,15 +124,20 @@ if (login == "1"):
                         print("PRICE OF ONE TICKET IS",Price)
                         break
                 
-                Date = input("ENTER DATE OF FLIGHT (YYYY-MM-DD): ")
-                Tickets = int(input("ENTER NUMBER OF TICKETS : "))
+                Date = takeinputdate()
+                while(True):
+                    try:
+                        Tickets = int(input("ENTER NUMBER OF TICKETS : "))
+                        break
+                    except:
+                        print("Please enter valid value")
                 
                 Total_Cost=Tickets*Price;
                 
                 print("YOUR BOOKING IS:")
                 
-                print("CUSTOMER NAME,   FLIGHT CODE,   DATE,   NUMBER OF TICKETS")
-                print(Customer_Name," ", Flight_Code, " ",  Date," ",  Tickets)
+                print("##","CUSTOMER NAME", "FLIGHT CODE", "DATE", "NUMBER OF TICKETS","##")
+                print([Customer_Name, Flight_Code,  formatdate(Date), Tickets])
                 
                 print("THE TOTAL COST IS", Total_Cost)
                 
@@ -143,20 +147,21 @@ if (login == "1"):
                     print(" PRESS 0 TO STOP BOOKING")
                     print(" PRESS 1 TO CONFIRM THE BOOKING")
                     
-                    confirm=int(input("ENTER NUMBER: "))
+                    confirm=input("ENTER NUMBER: ")
                     
-                    if(confirm==1):
-                        Booking_Id=createbookingid()
-                        Booking_Info = '''insert into Bookings (User_Id,Customer_Name,Flight_Code, Date, Number_of_Tickets, Booking_Id) values('{}','{}','{}','{}',{},'{}')'''.format(User_Id,Customer_Name,Flight_Code, Date, Tickets, Booking_Id)
-                        mycursor.execute(Booking_Info)
-                        mycon.commit()
+                    if(confirm=='1'):
+                        Booking_Info = '''insert into Bookings (User_Id,Customer_Name,Flight_Code, Date, Number_of_Tickets) values('{}','{}','{}','{}',{})'''.format(User_Id,Customer_Name,Flight_Code, Date, Tickets)
+                        myresult=query_execute(Booking_Info)
+                        #mycon.commit()
                         print("BOOKING CONFIRMED")
+                        myresult=query_execute('''SELECT LAST_INSERT_ID()''')
+                        Booking_Id=myresult[0][0]
                         print("YOUR BOOKING ID IS",Booking_Id)
                         print("HAVE A WONDERFUL JOURNEY\n")
                         break
                     
                 
-                    elif (confirm==0):
+                    elif (confirm=='0'):
                        break 
                    
                     else:
@@ -167,8 +172,7 @@ if (login == "1"):
                 
                 while(True):
                     Booking_Id=input("ENTER BOOKING ID")
-                    mycursor.execute('''select * from Bookings  where User_Id= '{}' and  Booking_Id= '{}' '''.format(User_Id, Booking_Id))
-                    myresult=mycursor.fetchall()
+                    myresult=query_execute('''select * from Bookings  where User_Id= '{}' and  Booking_Id= '{}' '''.format(User_Id, Booking_Id))
                     if(myresult==[]):
                         print("THIS BOOKING DOES NOT EXIST FOR YOU. PLEASE TRY AGAIN")
                     else:
@@ -176,6 +180,7 @@ if (login == "1"):
                     
                 print('##',("USER ID","CUSTOMER NAME" ,"FLIGHT CODE", "DATE", "NUMBER OF TICKETS", "BOOKING ID"),'##')
                 for j in myresult:
+                                j=formatdate(j,3)
                                 print(j)
                 print()
 
@@ -183,8 +188,7 @@ if (login == "1"):
 
                 while(True):
                     Booking_Id=input("ENTER BOOKING ID: ")
-                    mycursor.execute('''select * from Bookings  where User_Id= '{}' and Booking_Id= '{}' '''.format(User_Id,Booking_Id))
-                    myresult=mycursor.fetchall()
+                    myresult=query_execute('''select * from Bookings  where User_Id= '{}' and Booking_Id= '{}' '''.format(User_Id,Booking_Id))
                     if(myresult==[]):
                         print("THIS BOOKING DOES NOT EXIST FOR YOU. PLEASE TRY AGAIN")
                     else:
@@ -194,16 +198,15 @@ if (login == "1"):
                         print(" PRESS 1 TO CONFIRM CANCELLATION")
                         print(" PRESS 2 TO STOP CANCELLATION")
                         
-                        confirm=int(input("ENTER NUMBER: "))
+                        confirm=input("ENTER NUMBER: ")
                         
-                        if(confirm==1):
-                             mycursor.execute("delete from Bookings where User_Id='{}' and Booking_Id='{}' ".format(User_Id,Booking_Id))
-                             mycon.commit()
+                        if(confirm=='1'):
+                             myresult=query_execute("delete from Bookings where User_Id='{}' and Booking_Id='{}' ".format(User_Id,Booking_Id))
                              print(f"BOOKING WITH ID {Booking_Id} HAS BEEN CANCELLED\n")
                              break
                     
                     
-                        elif (confirm==2):
+                        elif (confirm=='2'):
                            break 
                        
                         else:
@@ -280,10 +283,10 @@ else:
                         
                         match flightrequest:
                             case '1':
-                                mycursor.execute("select Flights.*, Ticket_Price.Price from Flights JOIN Ticket_Price ON Flights.Flight_Code=Ticket_Price.Flight_Code")
-                                myresult = mycursor.fetchall()
+                                myresult=query_execute("select * FROM FLIGHTS")
                                 print("##",("FLIGHT CODE","AIRLINE","FROM","TO","DEPARTURE TIME","PRICE"),"##")
                                 for j in myresult:
+                                    j=formattime(j,4)
                                     print(j)
                                 print()
 
@@ -304,40 +307,38 @@ else:
                 Airline=input("ENTER AIRLINE")
                 Departure=input("ENTER DEPARTURE LOCATION")
                 Arrival=input("ENTER ARRIVAL LOCATION")
-                Time=input("ENTER TIME OF DEPARTURE (IN 24 HOUR FORMAT AS HR:MIN)")
-                Price=int(input("ENTER PRICE OF ONE TICKET"))
+                Time=takeinputtime()
+                while(True):
+                    try:
+                        Price = int(input("ENTER PRICE OF ONE TICKET : "))
+                        break
+                    except:
+                        print("Please enter valid value")
                 
-                if(not flightalreadyexists(Flightcode,Airline,Departure,Arrival,Time,Price)):
+                if(not flightalreadyexists(Airline,Departure,Arrival,Time,Price)):
 
-                    mycursor.execute('''insert into Flights (Flight_Code, Airline, From_ , To_, Departure_Time) 
-                    values ('{}','{}','{}','{}','{}') '''.format(Flightcode,Airline,Departure,Arrival,Time))
-                    mycursor.execute('''insert into Ticket_Price (Flight_Code, Price)
-                        values ('{}',{})'''.format(Flightcode,Price) )
-                    mycon.commit()
+                    myresult=query_execute('''insert into Flights (Flight_Code, Airline, From_ , To_, Departure_Time, Price) 
+                    values ('{}','{}','{}','{}','{}',{}) '''.format(Flightcode,Airline,Departure,Arrival,Time,Price))
                     
                     print("NEW FLIGHT HAS BEEN ADDED:")
                     print("##",("FLIGHT CODE","AIRLINE","FROM","TO", "DEPARTURE TIME, TICKET PRICE"),"##")
-                    print(Flightcode," ", Airline, " ",  Departure," ",Arrival, " " ,Time, " ", Price)
+                    print(Flightcode," ", Airline, " ",  Departure," ",Arrival, " " ,formattime(Time), " ", Price)
                     print()
 
                 else:
-                    print("THIS FLIGHT ALREADY EXISTS UNDER DIFFERENT FLIGHT CODE\n")
+                    print("THIS FLIGHT ALREADY EXISTS\n")
                     
             case '3': #Modify Flight
                 print("ENTER FLIGHT CODE OF FLIGHT YOU WISH TO MODIFY")
                 Flightcode= takeexistinginput("FLIGHT CODE","FLIGHT_CODE","Flights")
-                mycursor.execute('''select Flights.*, Ticket_Price.Price
-                     FROM Flights
-                     JOIN Ticket_Price 
-                     ON Flights.Flight_Code=Ticket_Price.Flight_Code
+                myresult=query_execute('''select * FROM FLIGHTS
                      WHERE Flights.Flight_Code='{}' '''. format(Flightcode))
-                myresult = mycursor.fetchone()
-
-                Airline=myresult[1]
-                Departure=myresult[2]
-                Arrival=myresult[3]
-                Time=myresult[4]
-                Price=myresult[5]
+                #myresult = mycursor.fetchone()
+                Airline=myresult[0][1]
+                Departure=myresult[0][2]
+                Arrival=myresult[0][3]
+                Time=myresult[0][4]
+                Price=myresult[0][5]
                 
 
                 while(True):
@@ -355,57 +356,57 @@ else:
                                 case '1':
                                     while(True):
                                         newairline= input("ENTER NEW AIRLINE")
-                                        if(not flightalreadyexists(Flightcode,newairline,Departure,Arrival,Time,Price)):
+                                        if(not flightalreadyexists(newairline,Departure,Arrival,Time,Price)):
                                             Airline=updateflightfield(Flightcode, "Airline", newairline)
                                             print("UPDATED FLIGHT DETAILS:\n")
                                             showflightdetails(Flightcode)
                                             break
                                         else:
-                                            print("THIS FLIGHT ALREADY EXISTS UNDER DIFFERENT FLIGHT CODE. PLEASE ENTER DIFFERENT AIRLINE")
+                                            print("THIS FLIGHT ALREADY EXISTS. PLEASE ENTER DIFFERENT AIRLINE")
                                         
                                 case '2':
                                     while(True):
                                         newdeparture= input("ENTER NEW DEPARTURE LOCATION")
-                                        if(not flightalreadyexists(Flightcode,Airline,newdeparture,Arrival,Time,Price)):
+                                        if(not flightalreadyexists(Airline,newdeparture,Arrival,Time,Price)):
                                             Departure=updateflightfield(Flightcode, "From_", newdeparture)
                                             print("UPDATED FLIGHT DETAILS:\n")
                                             showflightdetails(Flightcode)
                                             break
                                         else:
-                                            print("THIS FLIGHT ALREADY EXISTS UNDER DIFFERENT FLIGHT CODE. PLEASE ENTER DIFFERENT DEPARTURE LOCATION")
+                                            print("THIS FLIGHT ALREADY EXISTS. PLEASE ENTER DIFFERENT DEPARTURE LOCATION")
                                     
                                 
                                 case '3':
                                     while(True):
                                         newarrival= input("ENTER NEW ARRIVAL LOCATION")
-                                        if(not flightalreadyexists(Flightcode,Airline,Departure,newarrival,Time,Price)):
+                                        if(not flightalreadyexists(Airline,Departure,newarrival,Time,Price)):
                                             Arrival=updateflightfield(Flightcode, "To_", newarrival)
                                             print("UPDATED FLIGHT DETAILS:\n")
                                             showflightdetails(Flightcode)
                                             break
                                         else:
-                                            print("THIS FLIGHT ALREADY EXISTS UNDER DIFFERENT FLIGHT CODE. PLEASE ENTER DIFFERENT ARRIVAL LOCATION")
+                                            print("THIS FLIGHT ALREADY EXISTS. PLEASE ENTER DIFFERENT ARRIVAL LOCATION")
                                 case '4':
                                     while(True):
-                                        newtime= input("ENTER NEW TIME OF DEPARTURE")
-                                        if(not flightalreadyexists(Flightcode,Airline,Departure,Arrival,newtime,Price)):
+                                        newtime= takeinputtime()
+                                        if(not flightalreadyexists(Airline,Departure,Arrival,newtime,Price)):
                                             Time=updateflightfield(Flightcode, "Departure_Time", newtime)
                                             print("UPDATED FLIGHT DETAILS:\n")
                                             showflightdetails(Flightcode)
                                             break
                                         else:
-                                            print("THIS FLIGHT ALREADY EXISTS UNDER DIFFERENT FLIGHT CODE. PLEASE ENTER DIFFERENT TIME OF DEPARTURE")
+                                            print("THIS FLIGHT ALREADY EXISTS. PLEASE ENTER DIFFERENT TIME OF DEPARTURE")
                                     
                                 case '5':
                                     while(True):
                                         newprice= input("ENTER NEW TICKET PRICE")
-                                        if(not flightalreadyexists(Flightcode,Airline,Departure,Arrival,Time,newprice)):
-                                            Time=updateprice(Flightcode, newprice)
+                                        if(not flightalreadyexists(Airline,Departure,Arrival,Time,newprice)):
+                                            Price=updateflightfield(Flightcode, "Price", newprice)
                                             print("UPDATED FLIGHT DETAILS:\n")
                                             showflightdetails(Flightcode)
                                             break
                                         else:
-                                            print("THIS FLIGHT ALREADY EXISTS UNDER DIFFERENT FLIGHT CODE. PLEASE ENTER DIFFERENT TICKET PRICE")
+                                            print("THIS FLIGHT ALREADY EXISTS. PLEASE ENTER DIFFERENT TICKET PRICE")
                                     
                                 case '6' :
                                     break
@@ -421,27 +422,25 @@ else:
                     print(" PRESS 1 TO CONFIRM REMOVAL")
                     print(" PRESS 2 TO STOP REMOVAL")
                     
-                    confirm=int(input("ENTER NUMBER: "))
+                    confirm=input("ENTER NUMBER: ")
                     
-                    if(confirm==1):
-                            mycursor.execute("delete from Flights where Flight_Code='{}' ".format(Flightcode))
-                            mycursor.execute("delete from Ticket_Price where Flight_Code='{}' ".format(Flightcode))
-                            mycon.commit()
+                    if(confirm=='1'):
+                            myresult=query_execute("delete from Flights where Flight_Code='{}' ".format(Flightcode))
                             print(f"FLIGHT WITH FLIGHT CODE {Flightcode} HAS BEEN REMOVED\n")
                             break
                 
                 
-                    elif (confirm==2):
+                    elif (confirm=='2'):
                         break 
                     
                     else:
                         print("PLEASE ENTER VALID VALUE")
 
             case '5': #See customers booking details
-                mycursor.execute("select * from bookings")
-                myresult = mycursor.fetchall()
+                myresult=query_execute("select * from bookings")
                 print('##',("USER ID","CUSTOMER NAME" ,"FLIGHT CODE", "DATE", "NUMBER OF TICKETS", "BOOKING ID"),'##')
                 for j in myresult:
+                    j=formatdate(j,3)
                     print(j)
                 print()
 
@@ -451,24 +450,22 @@ else:
                     print(" PRESS 1 TO CONFIRM CANCELLATION")
                     print(" PRESS 2 TO STOP CANCELLATION")
                     
-                    confirm=int(input("ENTER NUMBER: "))
+                    confirm=input("ENTER NUMBER: ")
                     
-                    if(confirm==1):
-                            mycursor.execute("delete from Bookings where Booking_Id='{}' ".format(Booking_Id))
-                            mycon.commit()
+                    if(confirm=='1'):
+                            myresult=query_execute("delete from Bookings where Booking_Id='{}' ".format(Booking_Id))
                             print(f"BOOKING WITH ID {Booking_Id} HAS BEEN CANCELLED\n")
                             break
                 
                 
-                    elif (confirm==2):
+                    elif (confirm=='2'):
                         break 
                     
                     else:
                         print("PLEASE ENTER VALID VALUE")
 
             case '7': #see user details
-                mycursor.execute("select User_Id, User_Email, User_Phone from Users")
-                myresult = mycursor.fetchall()
+                myresult=query_execute("select User_Id, User_Email, User_Phone from Users")
                 print("##",("USER ID","USER EMAIL", "USER PHONE"),"##")
                 for i in myresult:
                     print(i)
@@ -481,24 +478,22 @@ else:
                     print(" PRESS 1 TO CONFIRM REMOVAL")
                     print(" PRESS 2 TO STOP REMOVAL")
                     
-                    confirm=int(input("ENTER NUMBER: "))
+                    confirm=input("ENTER NUMBER: ")
                     
-                    if(confirm==1):
-                            mycursor.execute("delete from Users where User_Id='{}' ".format(User_Id))
-                            mycon.commit()
+                    if(confirm=='1'):
+                            myresult=query_execute("delete from Users where User_Id='{}' ".format(User_Id))
                             print(f"USER WITH USER ID {User_Id} HAS BEEN REMOVED\n")
                             break
                 
                 
-                    elif (confirm==2):
+                    elif (confirm=='2'):
                         break 
                     
                     else:
                         print("PLEASE ENTER VALID VALUE")
 
             case '9': #checking your admin account details 
-                mycursor.execute("select * from Admins where Admin_Id = '{}' ".format(Admin_Id))
-                myresult = mycursor.fetchall()
+                myresult=query_execute("select * from Admins where Admin_Id = '{}' ".format(Admin_Id))
                 print("##",("ADMIN ID","ADMIN PASSWORD"),"##")
                 for i in myresult:
                     print(i)
@@ -510,8 +505,7 @@ else:
                     New_Password=input("ENTER NEW PASSWORD")
                     Confirm_New_Password=input("CONFIRM NEW PASSWORD")
                     if(New_Password==Confirm_New_Password):
-                        mycursor.execute('''UPDATE Admins SET Admin_Password = '{}' where Admin_Id='{}' '''.format(New_Password,Admin_Id))
-                        mycon.commit()
+                        myresult=query_execute('''UPDATE Admins SET Admin_Password = '{}' where Admin_Id='{}' '''.format(New_Password,Admin_Id))
                         print("PASSWORD UPDATED\n")
                         break
                     else: 
